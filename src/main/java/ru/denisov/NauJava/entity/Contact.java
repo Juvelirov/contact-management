@@ -110,14 +110,6 @@ public class Contact {
         this.createdAt = createdAt;
     }
 
-    public Organization getOrganizationId() {
-        return organization;
-    }
-
-    public void setOrganizationId(Organization organizationId) {
-        this.organization = organizationId;
-    }
-
     @Override
     public String toString() {
         return "Contact{" +
@@ -130,5 +122,13 @@ public class Contact {
                 ", createdAt=" + createdAt +
                 ", organizationId=" + organization +
                 '}';
+    }
+
+    public Organization getOrganizationId() {
+        return organization;
+    }
+
+    public void setOrganization(Organization organization) {
+        this.organization = organization;
     }
 }

@@ -27,7 +27,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             throw new RuntimeException("Имя или фамилия контакта не могут быть пустыми");
         }
         organizationRepository.save(organization);
-        contact.setOrganizationId(organization);
+        contact.setOrganization(organization);
         contactRepository.save(contact);
     }
 }

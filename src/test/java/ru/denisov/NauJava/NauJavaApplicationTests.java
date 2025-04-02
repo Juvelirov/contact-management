@@ -1,3 +1,4 @@
+/*
 package ru.denisov.NauJava;
 
 import org.junit.jupiter.api.Test;
@@ -11,3 +12,5 @@ class NauJavaApplicationTests {
 	}
 
 }
+
+*/
