@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>ОТЧЁТ</title>
+    <style>
+        table {border-collapse: collapse; width: 100%;}
+        th, td {border: 1px solid #ddd; padding: 8px; text-align: left;}
+        th {background-color: #f2f2f2;}
+    </style>
+</head>
+<body>
+<h1>Статистика</h1>
+
+<h2>Пользователи</h2>
+<p>Количество пользователей: <span th:text="${userCount}"></span></p>
+<p>Время: <span th:text="${userCountTime}"></span> мс</p>
+
+<h2>Сущности контакта</h2>
+<table>
+    <tr><th>ID</th><th>Номер телефона</th></tr>
+    <tr th:each="entity : ${entities}">
+        <td th:text="${entity.id}"></td>
+        <td th:text="${entity.phoneNumber}"></td>
+    </tr>
+</table>
+<p>Время вычисления: <span th:text="${entitiesTime}"></span> мс</p>
+
+<h2>Время формирования</h2>
+<p th:text="${totalTime} + ' мс'"></p>
+</body>
+</html>
