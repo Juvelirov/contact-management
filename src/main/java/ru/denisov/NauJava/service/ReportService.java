@@ -7,6 +7,7 @@ import org.thymeleaf.context.Context;
 import ru.denisov.NauJava.entity.Contact;
 import ru.denisov.NauJava.entity.Report;
 import ru.denisov.NauJava.enums.ReportStatus;
+import ru.denisov.NauJava.other.TaskResult;
 import ru.denisov.NauJava.repository.ReportRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,7 +41,7 @@ public class ReportService {
         if (report.isPresent()) {
             return report.get().getContent();
         } else {
-            return "Отчет не найден!";
+            return "Отчет не найден";
         }
     }
 
@@ -56,44 +57,47 @@ public class ReportService {
 
     private void generateReport(Long reportId) throws ExecutionException, InterruptedException {
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Отчет не найден"));
+                .orElseThrow(() -> new RuntimeException("Отчёт не найден"));
 
-        long startTime = System.currentTimeMillis();
+        try {
+            long startTime = System.currentTimeMillis();
 
-        // Запуск в разных потоках
-        CompletableFuture<Long> userCountFuture = CompletableFuture.supplyAsync(() -> {
-            long taskStart = System.currentTimeMillis();
-            long count = userService.countUsers();
-            long elapsed = System.currentTimeMillis() - taskStart;
-            return elapsed;
-        });
+            CompletableFuture<TaskResult<Long>> usersFuture = CompletableFuture.supplyAsync(() -> {
+                long taskStart = System.currentTimeMillis();
+                long count = userService.countUsers();
+                return new TaskResult<>(count, System.currentTimeMillis() - taskStart);
+            });
 
-        CompletableFuture<Long> entitiesFuture = CompletableFuture.supplyAsync(() -> {
-            long taskStart = System.currentTimeMillis();
-            List<Contact> entities = contactService.getAllEntities();
-            long elapsed = System.currentTimeMillis() - taskStart;
-            return elapsed;
-        });
+            CompletableFuture<TaskResult<List<Contact>>> contactsFuture = CompletableFuture.supplyAsync(() -> {
+                long taskStart = System.currentTimeMillis();
+                List<Contact> entities = contactService.getAllEntities();
+                return new TaskResult<>(entities, System.currentTimeMillis() - taskStart);
+            });
 
-        // Ждем завершения всех задач
-        CompletableFuture.allOf(userCountFuture, entitiesFuture).join();
+            CompletableFuture.allOf(usersFuture, contactsFuture).join();
 
-        long userCountTime = userCountFuture.get();
-        long entitiesTime = entitiesFuture.get();
-        long totalTime = System.currentTimeMillis() - startTime;
+            TaskResult<Long> userCountResult = usersFuture.get();
+            TaskResult<List<Contact>> entitiesResult = contactsFuture.get();
 
-        // Формируем HTML
-        String htmlReport = buildHtmlReport(userService.countUsers(),
-                contactService.getAllEntities(),
-                userCountTime,
-                entitiesTime,
-                totalTime);
+            String htmlReport = buildHtmlReport(
+                    userCountResult.getResult(),
+                    entitiesResult.getResult(),
+                    userCountResult.getExecutionTime(),
+                    entitiesResult.getExecutionTime(),
+                    System.currentTimeMillis() - startTime
+            );
 
-        // Обновляем отчет
-        report.setContent(htmlReport);
-        report.setStatus(ReportStatus.COMPLETED);
-        report.setCompletedAt(LocalDateTime.now());
-        reportRepository.save(report);
+            report.setContent(htmlReport);
+            report.setStatus(ReportStatus.COMPLETED);
+            report.setCompletedAt(LocalDateTime.now());
+
+        } catch (Exception exception) {
+            report.setStatus(ReportStatus.ERROR);
+            report.setContent("Ошибка " + exception.getMessage());
+            throw exception;
+        } finally {
+            reportRepository.save(report);
+        }
     }
 
     // Для thymeleaf
