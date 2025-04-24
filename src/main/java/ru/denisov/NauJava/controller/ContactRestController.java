@@ -1,66 +1,76 @@
 package ru.denisov.NauJava.controller;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.denisov.NauJava.dto.ContactDto;
 import ru.denisov.NauJava.entity.Contact;
-import ru.denisov.NauJava.repository.ContactRepository;
+import ru.denisov.NauJava.exception.NotFoundException;
+import ru.denisov.NauJava.service.ContactService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/contacts")
+@RequestMapping("api/v1/contacts")
+@Slf4j
 public class ContactRestController {
 
-    private final ContactRepository contactRepository;
+    private final ContactService contactService;
 
     @Autowired
-    public ContactRestController(ContactRepository contactRepository) {
-        this.contactRepository = contactRepository;
+    public ContactRestController(ContactService contactService) {
+        this.contactService = contactService;
     }
 
-    /**
-     * Поиск контактов по имени и фамилии.
-     *
-     * @param firstname имя
-     * @param lastname фамилия
-     * @return список контактов при успехе, сообщение об ошибке при пустых параметрах
-     */
-    @GetMapping("/findByName")
-    public ResponseEntity<?> findByFullName(
-            @RequestParam @NotBlank String firstname,
-            @RequestParam @NotBlank String lastname) {
-
-        if (firstname.isBlank() || lastname.isBlank()) {
-            return ResponseEntity.badRequest().body("Имя и фамилия обязательны к заполнению!");
-        }
-
-        return ResponseEntity.ok(
-                contactRepository.findByFirstnameAndLastname(firstname, lastname)
-        );
+    @PostMapping
+    public ResponseEntity<Contact> createContact(@Valid @RequestBody ContactDto contactDto) {
+        log.info("POST /api/v1/contacts - create contact");
+        Contact createdContact = contactService.createContact(contactDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdContact);
     }
 
-    /**
-     * Поиск контактов по наименованию организации.
-     *
-     * @param organizationName название организации
-     * @return список контактов при успехе, сообщение об ошибке если организация не найдена в бд
-     */
-    @GetMapping("/findByOrganization")
-    public ResponseEntity<?> findByOrganization(
-            @RequestParam @NotBlank String organizationName) {
-
-        if (organizationName.isBlank()) {
-            return ResponseEntity.badRequest().body("Название организации обязательно к заполнению!");
-        }
-
-        List<Contact> contacts = contactRepository.findContactsByOrganizationName(organizationName);
-
-        if (contacts.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Контакты не найдены для этой организации.");
-        }
-
+    @GetMapping
+    public ResponseEntity<List<Contact>> getAllContacts() {
+        log.info("GET /api/v1/contacts - get all contacts");
+        List<Contact> contacts = contactService.getAllContacts();
         return ResponseEntity.ok(contacts);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getContactById(@PathVariable Integer id) {
+        log.info("GET /api/v1/contacts/{} - get contact by id", id);
+        try {
+            Contact contact = contactService.getContactById(id);
+            return ResponseEntity.ok(contact);
+        } catch (NotFoundException e) {
+            log.error("Contact not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateContact(@PathVariable Integer id, @Valid @RequestBody ContactDto contactDto) {
+        log.info("PUT /api/v1/contacts/{} - update contact", id);
+        try {
+            Contact updatedContact = contactService.updateContact(id, contactDto);
+            return ResponseEntity.ok(updatedContact);
+        } catch (NotFoundException e) {
+            log.error("Contact not found for update: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteContact(@PathVariable Integer id) {
+        log.info("DELETE /api/v1/contacts/{} - delete contact", id);
+        try {
+            contactService.deleteContact(id);
+            return ResponseEntity.noContent().build();
+        } catch (NotFoundException e) {
+            log.error("Contact not found for deletion: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 }

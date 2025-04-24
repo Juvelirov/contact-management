@@ -70,7 +70,7 @@ public class ReportService {
 
             CompletableFuture<TaskResult<List<Contact>>> contactsFuture = CompletableFuture.supplyAsync(() -> {
                 long taskStart = System.currentTimeMillis();
-                List<Contact> entities = contactService.getAllEntities();
+                List<Contact> entities = contactService.getAllContacts();
                 return new TaskResult<>(entities, System.currentTimeMillis() - taskStart);
             });
 
